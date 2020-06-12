@@ -1,0 +1,18 @@
+body {
+	/*background: url("../img/money-2696229_1920.jpg") no-repeat center center fixed;*/
+	background-size: cover;
+}
+
+.login-form-container{
+	margin-top: 10em;
+}
+
+#email, #password {
+	background: transparent;
+	border: none;
+	font-size: 3em;
+	/*t: #39464E;*/
+
+}
+
+#email:focus {outline:none;}

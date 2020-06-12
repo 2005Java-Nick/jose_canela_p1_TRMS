@@ -1,0 +1,15 @@
+#eventLocation {
+	margin-bottom: 0;
+}
+
+#formProjectedReimbursement {
+	margin-bottom: 1em;
+}
+
+#submitNewReimbursement{
+	width: 100%;
+}
+
+#errCreate {
+	display: none;
+}
