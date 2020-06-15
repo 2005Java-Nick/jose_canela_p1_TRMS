@@ -40,9 +40,9 @@ public class Reimbursement implements Serializable {
 	private String eventType;
 	private Double coverage;
 	private String workJustification;
-	private Blob attachment;
-	private Blob approvalDocument;
-	private Blob grade;
+	private byte[] attachment;
+	private byte[] approvalDocument;
+	private byte[] grade;
 	private int approvalId;
 	private String status;
 	private int timeMissed;
@@ -261,19 +261,19 @@ public class Reimbursement implements Serializable {
 		this.workJustification = workJustification;
 	}
 
-	public Blob getAttachment() {
+	public byte[] getAttachment() {
 		return attachment;
 	}
 
-	public void setAttachment(Blob attachment) {
+	public void setAttachment(byte[] attachment) {
 		this.attachment = attachment;
 	}
 
-	public Blob getApprovalDocument() {
+	public byte[] getApprovalDocument() {
 		return approvalDocument;
 	}
 
-	public void setApprovalDocument(Blob approvalDocument) {
+	public void setApprovalDocument(byte[] approvalDocument) {
 		this.approvalDocument = approvalDocument;
 	}
 
@@ -373,11 +373,11 @@ public class Reimbursement implements Serializable {
 		this.departmentHeadEmail = departmentHeadEmail;
 	}
 
-	public Blob getGrade() {
+	public byte[] getGrade() {
 		return grade;
 	}
 
-	public void setGrade(Blob grade) {
+	public void setGrade(byte[] grade) {
 		this.grade = grade;
 	}
 	

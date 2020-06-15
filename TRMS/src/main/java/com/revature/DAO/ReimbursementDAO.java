@@ -1,13 +1,10 @@
 package com.revature.DAO;
 
-import java.io.IOException;
-import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -19,8 +16,6 @@ import org.apache.log4j.Logger;
 
 import com.revature.Objects.*;
 import com.revature.Util.ConnectionFactory;
-
-//import oracle.jdbc.OracleTypes;
 
 /**
  * Handles the operations between the server and the database for Reimbursement-related functions.
@@ -68,7 +63,7 @@ public class ReimbursementDAO {
 	 */
 	public int create(Employee em, String description, double cost, String gradeFormat, String eventType, String workJustification, byte[] attachment, byte[] approvalDocument, int timeMissed, java.util.Date startDate, String address, String city, String zip, String country, String passingGrade) {
 		
-		String sql = "call sp_insert_reimbursement(?,?,?,?,?,?,?,?,?,?,?,?,?)";
+		String sql = "{call sp_insert_reimbursement(?,?,?,?,?,?,?,?,?,?,?,?,?)}";
 		Connection conn = ConnectionFactory.getConnection();
 		CallableStatement cs = null;
 		int reimbursementId = 0;
@@ -132,7 +127,7 @@ public class ReimbursementDAO {
 	 */
 	private int createApprovalProcess() {
 		
-		String sql = "call sp_insert_approvalprocess(?, ?, ?)";
+		String sql = "{call sp_insert_approvalprocess(?, ?, ?)}";
 		CallableStatement cs = null;
 		Connection conn = ConnectionFactory.getConnection();
 		java.util.Date date = new java.util.Date();
@@ -177,7 +172,7 @@ public class ReimbursementDAO {
 	 * @return The id of the reimbursement location record.
 	 */
 	private int createReimbursementLocation(java.util.Date startDate, String address, String city, String zip, String country) {
-		String sql = "call sp_insert_reimlocation(?, ?, ?, ?, ?, ?)";
+		String sql = "{call sp_insert_reimlocation(?, ?, ?, ?, ?, ?)}";
 		
 		CallableStatement cs = null;
 		Connection conn = ConnectionFactory.getConnection();
@@ -225,87 +220,59 @@ public class ReimbursementDAO {
 	 * @return A list of reimbursements belonging to an employee.
 	 */
 	public List<Reimbursement> getAllByEmployee(Employee em){
-		/* EXAMPLE OF HOW TO GET RESULTSET FROM POSTGRES REFCURSORS USING JDBC
-		 * 
-		 // Setup function to call.
-		Statement stmt = conn.createStatement();
-		stmt.execute("CREATE OR REPLACE FUNCTION refcursorfunc() RETURNS refcursor AS '"
-				+ " DECLARE "
-				+ "    mycurs refcursor; "
-				+ " BEGIN "
-				+ "    OPEN mycurs FOR SELECT 1 UNION SELECT 2; "
-				+ "    RETURN mycurs; "
-				+ " END;' language plpgsql");
-		stmt.close();
-
-		// We must be inside a transaction for cursors to work.
-		conn.setAutoCommit(false);
-
-		// Procedure call.
-		CallableStatement proc = conn.prepareCall("{ ? = call refcursorfunc() }");
-		proc.registerOutParameter(1, Types.OTHER);
-		proc.execute();
-		ResultSet results = (ResultSet) proc.getObject(1);
-		while (results.next()) {
-		    // do something with the results...
-		}
-		results.close();
-		proc.close();
-		
-		 */
-		String getAllSQL = "{call sp_select_reimbursement (?, ?)}";
+		String getAllSQL = "{? = call sp_select_reimbursement(?)}";
 		List<Reimbursement> list = new ArrayList<Reimbursement>();
 		Reimbursement reimbursement = null;
 		Connection conn = ConnectionFactory.getConnection();
 		CallableStatement cs = null;
 		ResultSet rs = null;
 		try{
-			
+			// We must be inside a transaction for cursors to work.
+			conn.setAutoCommit(false);
 			cs = conn.prepareCall(getAllSQL);
-			cs.setInt(1, em.getEmployeeId());
-			cs.registerOutParameter(2, Types.REF_CURSOR);
+			cs.registerOutParameter(1, Types.OTHER);
+			cs.setInt(2, em.getEmployeeId());
 			
 			cs.execute();
 			
-			rs = (ResultSet) cs.getObject(2);
+			rs = (ResultSet) cs.getObject(1);
 			
 			while(rs.next()) {
-				
 				reimbursement = new Reimbursement();
-				reimbursement.setReimbursementId(rs.getInt("reimbursementid"));
-				reimbursement.setEmployeeId(rs.getInt("employeeid"));
-				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
-				reimbursement.setDepartmentHeadId(rs.getInt("departmentheadid"));
-				reimbursement.setBenCoId(rs.getInt("bencoid"));
-				reimbursement.setApprovalProcessId(rs.getInt("approvalprocessid"));
-				reimbursement.setEmployeeCreationDate(rs.getDate("employeecreationdate"));
-				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employeecreationtime"));
-				reimbursement.setSupervisorApproveDate(rs.getDate("supervisorapprovedate"));
-				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmentheadapprovedate"));
-				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocationid"));
+				reimbursement.setReimbursementId(rs.getInt("reimbursement_id"));
+				reimbursement.setEmployeeId(rs.getInt("employee_id"));
+				reimbursement.setSupervisorId(rs.getInt("supervisor_id"));
+				reimbursement.setDepartmentHeadId(rs.getInt("departmenthead_id"));
+				reimbursement.setBenCoId(rs.getInt("benco_id"));
+				reimbursement.setApprovalProcessId(rs.getInt("approvalprocess_id"));
+				reimbursement.setEmployeeCreationDate(rs.getDate("employee_creation_date"));
+				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employee_creation_time"));
+				reimbursement.setSupervisorApproveDate(rs.getDate("supervisor_approve_date"));
+				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmenthead_approve_date"));
+				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocation_id"));
 				reimbursement.setStartDate(rs.getDate("startdate"));
 				reimbursement.setAddress(rs.getString("address"));
 				reimbursement.setCity(rs.getString("city"));
 				reimbursement.setZip(rs.getString("zip"));
 				reimbursement.setCountry(rs.getString("country"));
 				reimbursement.setDescription(rs.getString("description"));
-				reimbursement.setCost(rs.getDouble("cost"));
+				reimbursement.setCost(rs.getDouble("reimbursement_cost"));
 				reimbursement.setAdjustedCost(rs.getDouble("adjustedcost"));
-				reimbursement.setGradeFormatId(rs.getInt("gradeformatid"));
+				reimbursement.setGradeFormatId(rs.getInt("grade_format_id"));
 				reimbursement.setFormat(rs.getString("format"));
-				reimbursement.setCustomPassingGrade(rs.getString("custompassinggrade"));
-				reimbursement.setDefaultPassingGrade(rs.getString("defaultpassinggrade"));
-				reimbursement.setEventTypeId(rs.getInt("eventtypeid"));
+				reimbursement.setCustomPassingGrade(rs.getString("custom_passing_grade"));
+				reimbursement.setDefaultPassingGrade(rs.getString("default_passing_grade"));
+				reimbursement.setEventTypeId(rs.getInt("eventtype_id"));
 				reimbursement.setEventType(rs.getString("eventtype"));
 				reimbursement.setCoverage(rs.getDouble("coverage"));
 				reimbursement.setWorkJustification(rs.getString("workjustification"));
-				reimbursement.setAttachment(rs.getBlob("attachment"));
-				reimbursement.setApprovalDocument(rs.getBlob("approvaldocument"));
-				reimbursement.setApprovalId(rs.getInt("approvalid"));
+				reimbursement.setAttachment(rs.getBytes("attachment"));
+				reimbursement.setApprovalDocument(rs.getBytes("approvaldocument"));
+				reimbursement.setApprovalId(rs.getInt("approval_id"));
 				reimbursement.setStatus(rs.getString("status"));
 				reimbursement.setTimeMissed(rs.getInt("timemissed"));
 				reimbursement.setDenyReason(rs.getString("denyreason"));
-				reimbursement.setInflatedReimbursementReason(rs.getString("inflatedreimbursementreason"));
+				reimbursement.setInflatedReimbursementReason(rs.getString("inflated_reimbursement_reason"));
 				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
 				reimbursement.setSupervisorEmail(rs.getString("supervisoremail"));
 				reimbursement.setSupervisorFirstName(rs.getString("supervisorfirstname"));
@@ -314,7 +281,7 @@ public class ReimbursementDAO {
 				reimbursement.setDepartmentHeadEmail(rs.getString("departmentheademail"));
 				reimbursement.setDepartmentHeadFirstName(rs.getString("departmentheadfirstname"));
 				reimbursement.setDepartmentHeadLastName(rs.getString("departmentheadlastname"));
-				reimbursement.setGrade(rs.getBlob("grade"));
+				reimbursement.setGrade(rs.getBytes("grade"));
 				list.add(reimbursement);
 			}
 			
@@ -338,12 +305,12 @@ public class ReimbursementDAO {
 	}
 	
 	/**
-	 * Returns a list of all the eventypes available.
+	 * Returns a list of all the eventtypes available.
 	 * @return A list of all event types.
 	 */
 	public List<EventType> getEventTypes(){
 		List<EventType> events = new ArrayList<EventType>();
-		String sql = "SELECT * FROM eventtype ORDER BY eventtypeid";
+		String sql = "SELECT * FROM event_type ORDER BY eventtype_id";
 		EventType eventType = null;
 		Statement statement = null;
 		ResultSet rs = null;
@@ -354,7 +321,7 @@ public class ReimbursementDAO {
 			
 			while(rs.next()) {
 				eventType = new EventType();
-				eventType.setEventTypeId(rs.getInt("eventtypeid"));
+				eventType.setEventTypeId(rs.getInt("eventtype_id"));
 				eventType.setEventType(rs.getString("eventtype"));
 				eventType.setCoverage(rs.getDouble("coverage"));
 				events.add(eventType);
@@ -385,7 +352,7 @@ public class ReimbursementDAO {
 	 */
 	public List<GradeFormat> getGradeFormats(){
 		List<GradeFormat> gradeFormats = new ArrayList<GradeFormat>();
-		String sql = "SELECT * FROM gradeformat ORDER BY gradeformatid";
+		String sql = "SELECT * FROM grade_format ORDER BY grade_format_id";
 		GradeFormat gradeFormat = null;
 		Statement statement = null;
 		ResultSet rs = null;
@@ -396,9 +363,9 @@ public class ReimbursementDAO {
 			
 			while(rs.next()) {
 				gradeFormat = new GradeFormat();
-				gradeFormat.setGradeFormatId(rs.getInt("gradeformatid"));
+				gradeFormat.setGradeFormatId(rs.getInt("grade_format_id"));
 				gradeFormat.setFormat(rs.getString("format"));
-				gradeFormat.setDefaultPassingGrade(rs.getString("defaultpassinggrade"));
+				gradeFormat.setDefaultPassingGrade(rs.getString("default_passing_grade"));
 				gradeFormats.add(gradeFormat);
 			}
 			
@@ -428,51 +395,51 @@ public class ReimbursementDAO {
 	 */
 	public Reimbursement getById(int id) {
 		Reimbursement reimbursement = new Reimbursement();
-		String sql = "{call sp_select_one_reimbursement (?, ?)}";
+		String sql = "{? = call sp_select_one_reimbursement(?)}";
 		Connection conn = ConnectionFactory.getConnection();
 		CallableStatement cs = null;
 		ResultSet rs = null;
 		try{
 			cs = conn.prepareCall(sql);
-			cs.setInt(1, id);
-			cs.registerOutParameter(2, Types.REF_CURSOR);
+			cs.registerOutParameter(1, Types.OTHER);
+			cs.setInt(2, id);
 			cs.execute();
-			rs = (ResultSet) cs.getObject(2);
+			rs = (ResultSet) cs.getObject(1);
 			while(rs.next()) {
-				reimbursement.setReimbursementId(rs.getInt("reimbursementid"));
-				reimbursement.setEmployeeId(rs.getInt("employeeid"));
-				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
-				reimbursement.setDepartmentHeadId(rs.getInt("departmentheadid"));
-				reimbursement.setBenCoId(rs.getInt("bencoid"));
-				reimbursement.setApprovalProcessId(rs.getInt("approvalprocessid"));
-				reimbursement.setEmployeeCreationDate(rs.getDate("employeecreationdate"));
-				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employeecreationtime"));
-				reimbursement.setSupervisorApproveDate(rs.getDate("supervisorapprovedate"));
-				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmentheadapprovedate"));
-				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocationid"));
+				reimbursement.setReimbursementId(rs.getInt("reimbursement_id"));
+				reimbursement.setEmployeeId(rs.getInt("employee_id"));
+				reimbursement.setSupervisorId(rs.getInt("supervisor_id"));
+				reimbursement.setDepartmentHeadId(rs.getInt("departmenthead_id"));
+				reimbursement.setBenCoId(rs.getInt("benco_id"));
+				reimbursement.setApprovalProcessId(rs.getInt("approvalprocess_id"));
+				reimbursement.setEmployeeCreationDate(rs.getDate("employee_creation_date"));
+				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employee_creation_time"));
+				reimbursement.setSupervisorApproveDate(rs.getDate("supervisor_approve_date"));
+				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmenthead_approve_date"));
+				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocation_id"));
 				reimbursement.setStartDate(rs.getDate("startdate"));
 				reimbursement.setAddress(rs.getString("address"));
 				reimbursement.setCity(rs.getString("city"));
 				reimbursement.setZip(rs.getString("zip"));
 				reimbursement.setCountry(rs.getString("country"));
 				reimbursement.setDescription(rs.getString("description"));
-				reimbursement.setCost(rs.getDouble("cost"));
+				reimbursement.setCost(rs.getDouble("reimbursement_cost"));
 				reimbursement.setAdjustedCost(rs.getDouble("adjustedcost"));
-				reimbursement.setGradeFormatId(rs.getInt("gradeformatid"));
+				reimbursement.setGradeFormatId(rs.getInt("grade_format_id"));
 				reimbursement.setFormat(rs.getString("format"));
-				reimbursement.setCustomPassingGrade(rs.getString("custompassinggrade"));
-				reimbursement.setDefaultPassingGrade(rs.getString("defaultpassinggrade"));
-				reimbursement.setEventTypeId(rs.getInt("eventtypeid"));
+				reimbursement.setCustomPassingGrade(rs.getString("custom_passing_grade"));
+				reimbursement.setDefaultPassingGrade(rs.getString("default_passing_grade"));
+				reimbursement.setEventTypeId(rs.getInt("eventtype_id"));
 				reimbursement.setEventType(rs.getString("eventtype"));
 				reimbursement.setCoverage(rs.getDouble("coverage"));
 				reimbursement.setWorkJustification(rs.getString("workjustification"));
-				reimbursement.setAttachment(rs.getBlob("attachment"));
-				reimbursement.setApprovalDocument(rs.getBlob("approvaldocument"));
-				reimbursement.setApprovalId(rs.getInt("approvalid"));
+				reimbursement.setAttachment(rs.getBytes("attachment"));
+				reimbursement.setApprovalDocument(rs.getBytes("approvaldocument"));
+				reimbursement.setApprovalId(rs.getInt("approval_id"));
 				reimbursement.setStatus(rs.getString("status"));
 				reimbursement.setTimeMissed(rs.getInt("timemissed"));
 				reimbursement.setDenyReason(rs.getString("denyreason"));
-				reimbursement.setInflatedReimbursementReason(rs.getString("inflatedreimbursementreason"));
+				reimbursement.setInflatedReimbursementReason(rs.getString("inflated_reimbursement_reason"));
 				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
 				reimbursement.setSupervisorEmail(rs.getString("supervisoremail"));
 				reimbursement.setSupervisorFirstName(rs.getString("supervisorfirstname"));
@@ -481,7 +448,7 @@ public class ReimbursementDAO {
 				reimbursement.setDepartmentHeadEmail(rs.getString("departmentheademail"));
 				reimbursement.setDepartmentHeadFirstName(rs.getString("departmentheadfirstname"));
 				reimbursement.setDepartmentHeadLastName(rs.getString("departmentheadlastname"));
-				reimbursement.setGrade(rs.getBlob("grade"));
+				reimbursement.setGrade(rs.getBytes("grade"));
 			}
 			
 			rs.close();
@@ -516,7 +483,7 @@ public class ReimbursementDAO {
 	 */
 	public List<EmployeeReimbursement> getAllReimbursementsFromUnderlings(int id){
 		List<EmployeeReimbursement> list = new ArrayList<EmployeeReimbursement>();
-		String sql = "{call sp_select_all_underling_reim (?, ?)}";
+		String sql = "{? = call sp_select_all_underling_reim(?)}";
 		CallableStatement cs = null;
 		ResultSet rs = null;
 		Employee employee = null;
@@ -526,49 +493,49 @@ public class ReimbursementDAO {
 		try{
 			
 			cs = conn.prepareCall(sql);
-			cs.setInt(1, id);
-			cs.registerOutParameter(2, Types.REF_CURSOR);
+			cs.registerOutParameter(1, Types.OTHER);
+			cs.setInt(2, id);
 			
 			cs.execute();
 			
-			rs = (ResultSet) cs.getObject(2);
+			rs = (ResultSet) cs.getObject(1);
 			while(rs.next()) {
 				employee = new Employee();
 				reimbursement = new Reimbursement();
-				reimbursement.setReimbursementId(rs.getInt("reimbursementid"));
-				reimbursement.setEmployeeId(rs.getInt("employeeid"));
-				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
-				reimbursement.setDepartmentHeadId(rs.getInt("departmentheadid"));
-				reimbursement.setBenCoId(rs.getInt("bencoid"));
-				reimbursement.setApprovalProcessId(rs.getInt("approvalprocessid"));
-				reimbursement.setEmployeeCreationDate(rs.getDate("employeecreationdate"));
-				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employeecreationtime"));
-				reimbursement.setSupervisorApproveDate(rs.getDate("supervisorapprovedate"));
-				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmentheadapprovedate"));
-				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocationid"));
+				reimbursement.setReimbursementId(rs.getInt("reimbursement_id"));
+				reimbursement.setEmployeeId(rs.getInt("employee_id"));
+				reimbursement.setSupervisorId(rs.getInt("supervisor_id"));
+				reimbursement.setDepartmentHeadId(rs.getInt("departmenthead_id"));
+				reimbursement.setBenCoId(rs.getInt("benco_id"));
+				reimbursement.setApprovalProcessId(rs.getInt("approvalprocess_id"));
+				reimbursement.setEmployeeCreationDate(rs.getDate("employee_creation_date"));
+				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employee_creation_time"));
+				reimbursement.setSupervisorApproveDate(rs.getDate("supervisor_approve_date"));
+				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmenthead_approve_date"));
+				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocation_id"));
 				reimbursement.setStartDate(rs.getDate("startdate"));
 				reimbursement.setAddress(rs.getString("address"));
 				reimbursement.setCity(rs.getString("city"));
 				reimbursement.setZip(rs.getString("zip"));
 				reimbursement.setCountry(rs.getString("country"));
 				reimbursement.setDescription(rs.getString("description"));
-				reimbursement.setCost(rs.getDouble("cost"));
+				reimbursement.setCost(rs.getDouble("reimbursement_cost"));
 				reimbursement.setAdjustedCost(rs.getDouble("adjustedcost"));
-				reimbursement.setGradeFormatId(rs.getInt("gradeformatid"));
+				reimbursement.setGradeFormatId(rs.getInt("grade_format_id"));
 				reimbursement.setFormat(rs.getString("format"));
-				reimbursement.setCustomPassingGrade(rs.getString("custompassinggrade"));
-				reimbursement.setDefaultPassingGrade(rs.getString("defaultpassinggrade"));
-				reimbursement.setEventTypeId(rs.getInt("eventtypeid"));
+				reimbursement.setCustomPassingGrade(rs.getString("custom_passing_grade"));
+				reimbursement.setDefaultPassingGrade(rs.getString("default_passing_grade"));
+				reimbursement.setEventTypeId(rs.getInt("eventtype_id"));
 				reimbursement.setEventType(rs.getString("eventtype"));
 				reimbursement.setCoverage(rs.getDouble("coverage"));
 				reimbursement.setWorkJustification(rs.getString("workjustification"));
-				reimbursement.setAttachment(rs.getBlob("attachment"));
-				reimbursement.setApprovalDocument(rs.getBlob("approvaldocument"));
-				reimbursement.setApprovalId(rs.getInt("approvalid"));
+				reimbursement.setAttachment(rs.getBytes("attachment"));
+				reimbursement.setApprovalDocument(rs.getBytes("approvaldocument"));
+				reimbursement.setApprovalId(rs.getInt("approval_id"));
 				reimbursement.setStatus(rs.getString("status"));
 				reimbursement.setTimeMissed(rs.getInt("timemissed"));
 				reimbursement.setDenyReason(rs.getString("denyreason"));
-				reimbursement.setInflatedReimbursementReason(rs.getString("inflatedreimbursementreason"));
+				reimbursement.setInflatedReimbursementReason(rs.getString("inflated_reimbursement_reason"));
 				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
 				reimbursement.setSupervisorEmail(rs.getString("supervisoremail"));
 				reimbursement.setSupervisorFirstName(rs.getString("supervisorfirstname"));
@@ -577,13 +544,13 @@ public class ReimbursementDAO {
 				reimbursement.setDepartmentHeadEmail(rs.getString("departmentheademail"));
 				reimbursement.setDepartmentHeadFirstName(rs.getString("departmentheadfirstname"));
 				reimbursement.setDepartmentHeadLastName(rs.getString("departmentheadlastname"));
-				reimbursement.setGrade(rs.getBlob("grade"));
-				employee.setEmployeeId(rs.getInt("employeeid"));
+				reimbursement.setGrade(rs.getBytes("grade"));
+				employee.setEmployeeId(rs.getInt("employees_id"));
 				employee.setEmail(rs.getString("email"));
 				employee.setFirstName(rs.getString("firstname"));
 				employee.setLastName(rs.getString("lastname"));
 				employee.setReportsTo(rs.getInt("reportsto"));
-				employee.setDepartmentId(rs.getInt("departmentid"));
+				employee.setDepartmentId(rs.getInt("department_id"));
 				
 				employeeReimbursement = new EmployeeReimbursement();
 				employeeReimbursement.setReimbursement(reimbursement);
@@ -591,7 +558,6 @@ public class ReimbursementDAO {
 				list.add(employeeReimbursement);
 				
 			}
-			
 			
 			rs.close();
 			cs.close();
@@ -623,7 +589,7 @@ public class ReimbursementDAO {
 	 */
 	public List<EmployeeReimbursement> getAllReimbursementsFromDepartment(int departmentId) {
 		List<EmployeeReimbursement> list = new ArrayList<EmployeeReimbursement>();
-		String sql = "{call sp_select_all_department (?, ?)}";
+		String sql = "{? = call sp_select_all_department(?)}";
 		CallableStatement cs = null;
 		ResultSet rs = null;
 		Employee employee = null;
@@ -633,49 +599,50 @@ public class ReimbursementDAO {
 		try{
 			
 			cs = conn.prepareCall(sql);
-			cs.setInt(1, departmentId);
-			cs.registerOutParameter(2, Types.REF_CURSOR);
+			
+			cs.registerOutParameter(1, Types.OTHER);
+			cs.setInt(2, departmentId);
 			
 			cs.execute();
 			
-			rs = (ResultSet) cs.getObject(2);
+			rs = (ResultSet) cs.getObject(1);
 			while(rs.next()) {
 				employee = new Employee();
 				reimbursement = new Reimbursement();
-				reimbursement.setReimbursementId(rs.getInt("reimbursementid"));
-				reimbursement.setEmployeeId(rs.getInt("employeeid"));
-				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
-				reimbursement.setDepartmentHeadId(rs.getInt("departmentheadid"));
-				reimbursement.setBenCoId(rs.getInt("bencoid"));
-				reimbursement.setApprovalProcessId(rs.getInt("approvalprocessid"));
-				reimbursement.setEmployeeCreationDate(rs.getDate("employeecreationdate"));
-				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employeecreationtime"));
-				reimbursement.setSupervisorApproveDate(rs.getDate("supervisorapprovedate"));
-				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmentheadapprovedate"));
-				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocationid"));
+				reimbursement.setReimbursementId(rs.getInt("reimbursement_id"));
+				reimbursement.setEmployeeId(rs.getInt("employee_id"));
+				reimbursement.setSupervisorId(rs.getInt("supervisor_id"));
+				reimbursement.setDepartmentHeadId(rs.getInt("departmenthead_id"));
+				reimbursement.setBenCoId(rs.getInt("benco_id"));
+				reimbursement.setApprovalProcessId(rs.getInt("approvalprocess_id"));
+				reimbursement.setEmployeeCreationDate(rs.getDate("employee_creation_date"));
+				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employee_creation_time"));
+				reimbursement.setSupervisorApproveDate(rs.getDate("supervisor_approve_date"));
+				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmenthead_approve_date"));
+				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocation_id"));
 				reimbursement.setStartDate(rs.getDate("startdate"));
 				reimbursement.setAddress(rs.getString("address"));
 				reimbursement.setCity(rs.getString("city"));
 				reimbursement.setZip(rs.getString("zip"));
 				reimbursement.setCountry(rs.getString("country"));
 				reimbursement.setDescription(rs.getString("description"));
-				reimbursement.setCost(rs.getDouble("cost"));
+				reimbursement.setCost(rs.getDouble("reimbursement_cost"));
 				reimbursement.setAdjustedCost(rs.getDouble("adjustedcost"));
-				reimbursement.setGradeFormatId(rs.getInt("gradeformatid"));
+				reimbursement.setGradeFormatId(rs.getInt("grade_format_id"));
 				reimbursement.setFormat(rs.getString("format"));
-				reimbursement.setCustomPassingGrade(rs.getString("custompassinggrade"));
-				reimbursement.setDefaultPassingGrade(rs.getString("defaultpassinggrade"));
-				reimbursement.setEventTypeId(rs.getInt("eventtypeid"));
+				reimbursement.setCustomPassingGrade(rs.getString("custom_passing_grade"));
+				reimbursement.setDefaultPassingGrade(rs.getString("default_passing_grade"));
+				reimbursement.setEventTypeId(rs.getInt("eventtype_id"));
 				reimbursement.setEventType(rs.getString("eventtype"));
 				reimbursement.setCoverage(rs.getDouble("coverage"));
 				reimbursement.setWorkJustification(rs.getString("workjustification"));
-				reimbursement.setAttachment(rs.getBlob("attachment"));
-				reimbursement.setApprovalDocument(rs.getBlob("approvaldocument"));
-				reimbursement.setApprovalId(rs.getInt("approvalid"));
+				reimbursement.setAttachment(rs.getBytes("attachment"));
+				reimbursement.setApprovalDocument(rs.getBytes("approvaldocument"));
+				reimbursement.setApprovalId(rs.getInt("approval_id"));
 				reimbursement.setStatus(rs.getString("status"));
 				reimbursement.setTimeMissed(rs.getInt("timemissed"));
 				reimbursement.setDenyReason(rs.getString("denyreason"));
-				reimbursement.setInflatedReimbursementReason(rs.getString("inflatedreimbursementreason"));
+				reimbursement.setInflatedReimbursementReason(rs.getString("inflated_reimbursement_reason"));
 				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
 				reimbursement.setSupervisorEmail(rs.getString("supervisoremail"));
 				reimbursement.setSupervisorFirstName(rs.getString("supervisorfirstname"));
@@ -684,13 +651,13 @@ public class ReimbursementDAO {
 				reimbursement.setDepartmentHeadEmail(rs.getString("departmentheademail"));
 				reimbursement.setDepartmentHeadFirstName(rs.getString("departmentheadfirstname"));
 				reimbursement.setDepartmentHeadLastName(rs.getString("departmentheadlastname"));
-				reimbursement.setGrade(rs.getBlob("grade"));
-				employee.setEmployeeId(rs.getInt("employeeid"));
+				reimbursement.setGrade(rs.getBytes("grade"));
+				employee.setEmployeeId(rs.getInt("employees_id"));
 				employee.setEmail(rs.getString("email"));
 				employee.setFirstName(rs.getString("firstname"));
 				employee.setLastName(rs.getString("lastname"));
 				employee.setReportsTo(rs.getInt("reportsto"));
-				employee.setDepartmentId(rs.getInt("departmentid"));
+				employee.setDepartmentId(rs.getInt("department_id"));
 				
 				employeeReimbursement = new EmployeeReimbursement();
 				employeeReimbursement.setReimbursement(reimbursement);
@@ -726,7 +693,7 @@ public class ReimbursementDAO {
 	 */
 	public List<EmployeeReimbursement> getAllReimbursementsForBenCo() {
 		List<EmployeeReimbursement> list = new ArrayList<EmployeeReimbursement>();
-		String sql = "{call sp_select_all_benco (?)}";
+		String sql = "{? = call sp_select_all_benco()}";
 		CallableStatement cs = null;
 		ResultSet rs = null;
 		Employee employee = null;
@@ -736,7 +703,7 @@ public class ReimbursementDAO {
 		try{
 			
 			cs = conn.prepareCall(sql);
-			cs.registerOutParameter(1, Types.REF_CURSOR);
+			cs.registerOutParameter(1, Types.OTHER);
 			
 			cs.execute();
 			
@@ -744,40 +711,40 @@ public class ReimbursementDAO {
 			while(rs.next()) {
 				employee = new Employee();
 				reimbursement = new Reimbursement();
-				reimbursement.setReimbursementId(rs.getInt("reimbursementid"));
-				reimbursement.setEmployeeId(rs.getInt("employeeid"));
-				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
-				reimbursement.setDepartmentHeadId(rs.getInt("departmentheadid"));
-				reimbursement.setBenCoId(rs.getInt("bencoid"));
-				reimbursement.setApprovalProcessId(rs.getInt("approvalprocessid"));
-				reimbursement.setEmployeeCreationDate(rs.getDate("employeecreationdate"));
-				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employeecreationtime"));
-				reimbursement.setSupervisorApproveDate(rs.getDate("supervisorapprovedate"));
-				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmentheadapprovedate"));
-				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocationid"));
+				reimbursement.setReimbursementId(rs.getInt("reimbursement_id"));
+				reimbursement.setEmployeeId(rs.getInt("employee_id"));
+				reimbursement.setSupervisorId(rs.getInt("supervisor_id"));
+				reimbursement.setDepartmentHeadId(rs.getInt("departmenthead_id"));
+				reimbursement.setBenCoId(rs.getInt("benco_id"));
+				reimbursement.setApprovalProcessId(rs.getInt("approvalprocess_id"));
+				reimbursement.setEmployeeCreationDate(rs.getDate("employee_creation_date"));
+				reimbursement.setEmployeeCreationTime(rs.getTimestamp("employee_creation_time"));
+				reimbursement.setSupervisorApproveDate(rs.getDate("supervisor_approve_date"));
+				reimbursement.setDepartmentHeadApproveDate(rs.getDate("departmenthead_approve_date"));
+				reimbursement.setReimbursementLocationId(rs.getInt("reimbursementlocation_id"));
 				reimbursement.setStartDate(rs.getDate("startdate"));
 				reimbursement.setAddress(rs.getString("address"));
 				reimbursement.setCity(rs.getString("city"));
 				reimbursement.setZip(rs.getString("zip"));
 				reimbursement.setCountry(rs.getString("country"));
 				reimbursement.setDescription(rs.getString("description"));
-				reimbursement.setCost(rs.getDouble("cost"));
+				reimbursement.setCost(rs.getDouble("reimbursement_cost"));
 				reimbursement.setAdjustedCost(rs.getDouble("adjustedcost"));
-				reimbursement.setGradeFormatId(rs.getInt("gradeformatid"));
+				reimbursement.setGradeFormatId(rs.getInt("grade_format_id"));
 				reimbursement.setFormat(rs.getString("format"));
-				reimbursement.setCustomPassingGrade(rs.getString("custompassinggrade"));
-				reimbursement.setDefaultPassingGrade(rs.getString("defaultpassinggrade"));
-				reimbursement.setEventTypeId(rs.getInt("eventtypeid"));
+				reimbursement.setCustomPassingGrade(rs.getString("custom_passing_grade"));
+				reimbursement.setDefaultPassingGrade(rs.getString("default_passing_grade"));
+				reimbursement.setEventTypeId(rs.getInt("eventtype_id"));
 				reimbursement.setEventType(rs.getString("eventtype"));
 				reimbursement.setCoverage(rs.getDouble("coverage"));
 				reimbursement.setWorkJustification(rs.getString("workjustification"));
-				reimbursement.setAttachment(rs.getBlob("attachment"));
-				reimbursement.setApprovalDocument(rs.getBlob("approvaldocument"));
-				reimbursement.setApprovalId(rs.getInt("approvalid"));
+				reimbursement.setAttachment(rs.getBytes("attachment"));
+				reimbursement.setApprovalDocument(rs.getBytes("approvaldocument"));
+				reimbursement.setApprovalId(rs.getInt("approval_id"));
 				reimbursement.setStatus(rs.getString("status"));
 				reimbursement.setTimeMissed(rs.getInt("timemissed"));
 				reimbursement.setDenyReason(rs.getString("denyreason"));
-				reimbursement.setInflatedReimbursementReason(rs.getString("inflatedreimbursementreason"));
+				reimbursement.setInflatedReimbursementReason(rs.getString("inflated_reimbursement_reason"));
 				reimbursement.setSupervisorId(rs.getInt("supervisorid"));
 				reimbursement.setSupervisorEmail(rs.getString("supervisoremail"));
 				reimbursement.setSupervisorFirstName(rs.getString("supervisorfirstname"));
@@ -786,13 +753,13 @@ public class ReimbursementDAO {
 				reimbursement.setDepartmentHeadEmail(rs.getString("departmentheademail"));
 				reimbursement.setDepartmentHeadFirstName(rs.getString("departmentheadfirstname"));
 				reimbursement.setDepartmentHeadLastName(rs.getString("departmentheadlastname"));
-				reimbursement.setGrade(rs.getBlob("grade"));
-				employee.setEmployeeId(rs.getInt("employeeid"));
+				reimbursement.setGrade(rs.getBytes("grade"));
+				employee.setEmployeeId(rs.getInt("employees_id"));
 				employee.setEmail(rs.getString("email"));
 				employee.setFirstName(rs.getString("firstname"));
 				employee.setLastName(rs.getString("lastname"));
 				employee.setReportsTo(rs.getInt("reportsto"));
-				employee.setDepartmentId(rs.getInt("departmentid"));
+				employee.setDepartmentId(rs.getInt("department_id"));
 				
 				employeeReimbursement = new EmployeeReimbursement();
 				employeeReimbursement.setReimbursement(reimbursement);
@@ -835,7 +802,7 @@ public class ReimbursementDAO {
 		CallableStatement cs = null;
 		if(role.equals("supervisor")) {
 			if(approval.equals("APPROVED")) {
-				String sql = "{call sp_update_approve_superv_reim (?,?)}";
+				String sql = "{call sp_update_approve_superv_reim(?,?)}";
 				try{
 					cs = conn.prepareCall(sql);
 					cs.setInt(1, id);
@@ -863,7 +830,7 @@ public class ReimbursementDAO {
 				}
 			}else {
 				
-				String sql = "{call sp_update_deny_supervisor_reim (?,?,?,?)}";
+				String sql = "{call sp_update_deny_supervisor_reim(?,?,?,?)}";
 				try{
 					cs = conn.prepareCall(sql);
 					cs.setInt(1, id);
@@ -890,7 +857,7 @@ public class ReimbursementDAO {
 			}
 		}else if(role.equals("departmentHead")) {
 			if(approval.equals("APPROVED")) {
-				String sql = "{call sp_update_approve_depart_reim (?,?)}";
+				String sql = "{call sp_update_approve_depart_reim(?,?)}";
 				try{
 					cs = conn.prepareCall(sql);
 					cs.setInt(1, id);
@@ -912,7 +879,7 @@ public class ReimbursementDAO {
 					}
 				}
 			}else {
-				String sql = "{call sp_update_deny_department_reim (?,?,?,?)}";
+				String sql = "{call sp_update_deny_department_reim(?,?,?,?)}";
 				try{
 					cs = conn.prepareCall(sql);
 					cs.setInt(1, id);
@@ -939,7 +906,7 @@ public class ReimbursementDAO {
 			}
 		}else if(role.equals("benefitsCoordinator")) {
 			if(approval.equals("APPROVED")) {
-				String sql = "{call sp_update_approve_benco_reim (?)}";
+				String sql = "{call sp_update_approve_benco_reim(?)}";
 				try{
 					cs = conn.prepareCall(sql);
 					cs.setInt(1, id);
@@ -960,7 +927,7 @@ public class ReimbursementDAO {
 					}
 				}
 			}else {
-				String sql = "{call sp_update_deny_benco_reim (?,?,?,?)}";
+				String sql = "{call sp_update_deny_benco_reim(?,?,?,?)}";
 				try{
 					cs = conn.prepareCall(sql);
 					cs.setInt(1, id);
@@ -987,7 +954,7 @@ public class ReimbursementDAO {
 			}
 		}else if(role.equals("employee")) {
 			if(approval.equals("APPROVED")) {
-				String sql = "{call sp_approve_reimb_employee (?)}";
+				String sql = "{call sp_approve_reimb_employee(?)}";
 				try{
 					
 					cs = conn.prepareCall(sql);
@@ -1047,7 +1014,7 @@ public class ReimbursementDAO {
 	 * @param reason The reason for the alteration.
 	 */
 	public void alterReimbursementAmount(int id, double alterAmount, String reason) {
-		String sql = "{call sp_update_alter_reim (?,?,?)}";
+		String sql = "{call sp_update_alter_reim(?,?,?)}";
 		CallableStatement cs = null;
 		Connection conn = ConnectionFactory.getConnection();
 		try{
@@ -1083,15 +1050,14 @@ public class ReimbursementDAO {
 	 * @param file The file to upload.
 	 */
 	public void uploadGrade(int id, byte[] file) {
-		String sql = "UPDATE reimbursement SET grade=? WHERE reimbursementid=?";
+		String sql = "UPDATE reimbursement SET grade=? WHERE reimbursement_id=?";
 		PreparedStatement ps = null;
 		Connection conn = ConnectionFactory.getConnection();
 		try{
 			
 			ps = conn.prepareStatement(sql);
-			Blob grade = conn.createBlob();
-			grade.setBytes(file.length, file);
-			ps.setBlob(1, grade);
+			byte[] grade = file;
+			ps.setBytes(1, grade);
 			ps.setInt(2, id);
 			
 			ps.executeUpdate();

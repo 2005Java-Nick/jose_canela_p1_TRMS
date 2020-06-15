@@ -263,11 +263,6 @@ begin
 end;
 $$ language plpgsql;
 -- select sp_select_all_benco();
-call sp_select_all_benco();
-begin;
-select sp_select_all_benco();
-fetch all in allben;
-commit;
 
 SELECT reimbursement.*, approvalprocess.*, reimbursementlocation.*, grade_format.*, event_type.*, approval.*, employees.*, supervisor.employees_id AS supervisorid, supervisor.email AS supervisoremail, supervisor.firstname AS supervisorfirstname, supervisor.lastname AS supervisorlastname, departmenthead.employees_id AS departmentheadid, departmenthead.employees_id AS departmentid, departmenthead.email AS departmentheademail, departmenthead.firstname AS departmentheadfirstname, departmenthead.lastname AS departmentheadlastname FROM ((((((((reimbursement INNER JOIN approvalprocess ON approvalprocess.approvalprocess_id=reimbursement.approvalprocess_id) INNER JOIN reimbursementlocation ON reimbursementlocation.reimbursementlocation_id=reimbursement.reimbursementlocation_id) INNER JOIN grade_format ON grade_format.grade_format_id=reimbursement.grade_format_id) INNER JOIN event_type ON event_type.eventtype_id=reimbursement.eventtype_id) INNER JOIN approval ON approval.approval_id=reimbursement.approval_id) INNER JOIN employees ON reimbursement.employee_id=employees.employees_id) LEFT JOIN employees supervisor ON reimbursement.supervisor_id=supervisor.employees_id) LEFT JOIN employees departmenthead ON reimbursement.departmenthead_id=departmenthead.employees_id) WHERE reimbursement.approval_id IN (3, 5) ORDER BY employee_creation_date, employee_creation_time;
 --------------------------------------------------------
@@ -361,6 +356,17 @@ begin
 commit;
 end
 $$;
+
+--------------------------------------------------------
+--  DDL for Procedure SP_UPDATE_APPROVE_BENCO_REIM
+--------------------------------------------------------
+create or replace procedure sp_approve_reimb_employee(p_id IN bigint)
+language plpgsql as $$
+begin
+    UPDATE reimbursement SET approval_id=(SELECT approval_id FROM approval WHERE status='APPROVED') WHERE reimbursement_id=p_id;
+commit;
+end
+$$;
 --------------------------------------------------------
 --  DDL for Procedure SP_UPDATE_APPROVE_BENCO_REIM
 --------------------------------------------------------
@@ -430,7 +436,7 @@ $$;
 create or replace function get_employee(email varchar, pw varchar) 
 returns table (emp_id bigint, emp_email varchar, emp_firstname varchar, emp_lastname varchar,emp_reportsto int,emp_departmentid bigint,emp_pw varchar) as $$
 begin
-	return query (select * from employees where employees.email=email and employees.pw = pw)
+	return query (select * from employees where employees.email=email and employees.pw = pw);
 end;
 $$ language plpgsql;
 
@@ -438,11 +444,43 @@ $$ language plpgsql;
 --------------------------------------------------------
 --  DDL for Function createEmployee
 --------------------------------------------------------
-create or replace procedure create_employee(email varchar, passW varchar, firstName varchar, lastName varchar, reportsTo int, departmentId int, pk inout bigint)
+create or replace procedure create_employee(mail varchar, passW varchar, firstName varchar, lastName varchar, reportsTo int, departmentId int, pk inout bigint)
 language plpgsql as $$
 begin
-	insert into employees (email, firstname, lastname, reportsto, department_id, pw) values (email, firstName, lastName, reportsTo, departmentId, passW) returning employees.employees_id into pk;
+	insert into employees (email, firstname, lastname, reportsto, department_id, pw) values (mail, firstName, lastName, reportsTo, departmentId, passW) returning employees.employees_id into pk;
 commit;
 end
 $$;
 -- call create_employee(?, ?, ?, ?, ?, ?, ?);
+
+--------------------------------------------------------
+--  Creating Employees
+--------------------------------------------------------
+--supervisor/departmenthead/CEO
+insert into employees (email, firstname, lastname, reportsto, department_id, pw) values ('nick@revature.com', 'Nick', 'Jones', 1, 3, 'nick');
+--benco reports to CEO
+insert into employees (email, firstname, lastname, reportsto, department_id, pw) values ('jose@revature.com','Jose', 'Canela', 1, 2,'jose');
+--department head reports to CEO
+insert into employees (email, firstname, lastname, reportsto, department_id, pw) values ('ashley@revature.com','Ashley', 'Valdez', 1, 1, 'ashley');
+--direct supervisor reports to department head
+insert into employees (email, firstname, lastname, reportsto, department_id, pw) values ('brandon@revature.com','Brandon', 'Marks', 3, 1, 'brandon');
+--regular employee reports to direct supervisor
+insert into employees (email, firstname, lastname, reportsto, department_id, pw) values ('kevin@revature.com','Kevin', 'Smith', 4, 1,'kevin');
+
+--------------------------------------------------------
+--  Creating Employee Roles
+--------------------------------------------------------
+--supervisor/departmenthead/CEO -> nick
+insert into employee_role (employees_id, employeetype_id) values (1, 2);
+insert into employee_role (employees_id, employeetype_id) values (1, 3);
+--benco reports to CEO -> jose
+insert into employee_role (employees_id, employeetype_id) values (2,4);
+--department head reports to CEO -> ashley
+insert into employee_role (employees_id, employeetype_id) values (3,3);
+--direct supervisor reports to department head -> brandon
+insert into employee_role (employees_id, employeetype_id) values (4,2);
+--regular employee reports to direct supervisor -> kevin
+insert into employee_role (employees_id, employeetype_id) values (5,1);
+
+
+
